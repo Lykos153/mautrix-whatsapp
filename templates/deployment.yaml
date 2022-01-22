@@ -47,38 +47,17 @@ spec:
       dnsConfig:
         {{- toYaml .Values.dnsConfig | nindent 8 }}
       {{- end }}
-      initContainers:
-        - name: init
-          securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.image.repository }}:{{ tpl .Values.image.tag . }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ["/bin/sh"]
-          args:
-            - "-c"
-            - |-
-              set -ex
-              cp /config/*.yaml /data/
-              chown {{.Values.uid}}:{{.Values.gid}} -R /data
-              chown {{.Values.uid}}:{{.Values.gid}} -R /logs
-          env:
-            - { name: UID, value: {{ .Values.uid | toString | quote }} }
-            - { name: GID, value: {{ .Values.gid | toString | quote }} }
-          volumeMounts:
-            - name: data
-              mountPath: /data
-            - name: logs
-              mountPath: /logs
-            - name: config
-              mountPath: /config
-          resources:
-            {{- toYaml .Values.resources | nindent 12 }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ tpl .Values.image.tag . }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+          - /usr/bin/mautrix-whatsapp
+          - "-n"
+          - "-c"
+          - "/data/config.yaml"
           ports:
             - name: http
               containerPort: {{ .Values.config.appservice.port }}
@@ -117,10 +96,8 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
-            - name: data
+            - name: config
               mountPath: /data
-            - name: logs
-              mountPath: /logs
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -137,7 +114,3 @@ spec:
         - name: config
           secret:
             secretName: {{ include "mautrix-whatsapp.fullname" . }}
-        - name: data
-          emptyDir: {}
-        - name: logs
-          emptyDir: {}
